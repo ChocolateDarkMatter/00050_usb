@@ -43,7 +43,12 @@ public class ServerDiscoveryService : IDisposable
 
         try
         {
-            _udpClient = new UdpClient(_discoveryPort);
+            // Create socket with ReuseAddress option to allow multiple instances or quick restarts
+            var socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+            socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+            socket.Bind(new IPEndPoint(IPAddress.Any, _discoveryPort));
+            _udpClient = new UdpClient { Client = socket };
+
             _listenerTask = Task.Run(() => ListenForAnnouncementsAsync(_cancellationTokenSource.Token), cancellationToken);
             _timeoutTask = Task.Run(() => MonitorServerTimeoutsAsync(_cancellationTokenSource.Token), cancellationToken);
         }

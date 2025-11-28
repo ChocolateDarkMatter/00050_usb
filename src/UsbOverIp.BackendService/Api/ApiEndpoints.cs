@@ -180,19 +180,7 @@ public static class ApiEndpoints
     {
         try
         {
-            // Get client IP from request
-            var clientIp = context.Connection.RemoteIpAddress?.ToString();
-            if (string.IsNullOrEmpty(clientIp))
-            {
-                logger.LogWarning("Unable to determine client IP address");
-                return Results.BadRequest(new ErrorResponse
-                {
-                    Code = "INVALID_CLIENT_IP",
-                    Message = "Unable to determine client IP address"
-                });
-            }
-
-            logger.LogInformation("Attach device requested: {BusId} to client {ClientIp}", busId, clientIp);
+            logger.LogInformation("Attach device requested: {BusId} (client-side operation)", busId);
 
             // Verify device exists
             var device = await deviceManager.GetDeviceAsync(busId);
@@ -217,25 +205,25 @@ public static class ApiEndpoints
                 });
             }
 
-            // Attach the device
-            await deviceManager.AttachDeviceAsync(busId, clientIp);
+            // Note: Attachment is now a client-side operation
+            // The client will run 'usbip attach' locally
+            // This endpoint just validates the device is ready to be attached
+            logger.LogInformation("Device {BusId} is ready for client-side attachment", busId);
 
-            // Return updated device in AttachResponse format
-            var updatedDevice = await deviceManager.GetDeviceAsync(busId);
             return Results.Ok(new AttachResponse
             {
                 Success = true,
-                Message = "Device attached successfully",
-                Device = updatedDevice
+                Message = "Device is ready for attachment. Run 'usbip attach' on client.",
+                Device = device
             });
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Error attaching device {BusId}", busId);
+            logger.LogError(ex, "Error validating device {BusId} for attachment", busId);
             return Results.Problem(
                 detail: ex.Message,
                 statusCode: 500,
-                title: $"Failed to attach device '{busId}'");
+                title: $"Failed to validate device '{busId}' for attachment");
         }
     }
 
@@ -246,7 +234,7 @@ public static class ApiEndpoints
     {
         try
         {
-            logger.LogInformation("Detach device requested: {BusId}", busId);
+            logger.LogInformation("Detach device requested: {BusId} (client-side operation)", busId);
 
             // Verify device exists
             var device = await deviceManager.GetDeviceAsync(busId);
@@ -260,36 +248,25 @@ public static class ApiEndpoints
                 });
             }
 
-            // Check if device is attached
-            if (!device.IsAttached)
-            {
-                logger.LogWarning("Device {BusId} is not attached", busId);
-                return Results.BadRequest(new ErrorResponse
-                {
-                    Code = "DEVICE_NOT_ATTACHED",
-                    Message = $"Device '{busId}' is not currently attached"
-                });
-            }
+            // Note: Detachment is now a client-side operation
+            // The client will run 'usbip detach' locally
+            // This endpoint just validates the device exists
+            logger.LogInformation("Device {BusId} ready for client-side detachment", busId);
 
-            // Detach the device
-            await deviceManager.DetachDeviceAsync(busId);
-
-            // Return updated device in AttachResponse format
-            var updatedDevice = await deviceManager.GetDeviceAsync(busId);
             return Results.Ok(new AttachResponse
             {
                 Success = true,
-                Message = "Device detached successfully",
-                Device = updatedDevice
+                Message = "Device is ready for detachment. Run 'usbip detach' on client.",
+                Device = device
             });
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Error detaching device {BusId}", busId);
+            logger.LogError(ex, "Error validating device {BusId} for detachment", busId);
             return Results.Problem(
                 detail: ex.Message,
                 statusCode: 500,
-                title: $"Failed to detach device '{busId}'");
+                title: $"Failed to validate device '{busId}' for detachment");
         }
     }
 }

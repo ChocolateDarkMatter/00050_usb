@@ -13,6 +13,7 @@ public class MainViewModel : ViewModelBase, IDisposable
 {
     private readonly IServerApiClient _apiClient;
     private readonly ServerDiscoveryService _discoveryService;
+    private readonly LocalUsbipClient _localUsbipClient;
     private string _serverUrl = "http://localhost:50051";
     private bool _isConnected;
     private bool _isLoading;
@@ -20,10 +21,11 @@ public class MainViewModel : ViewModelBase, IDisposable
     private ServerInfo? _serverInfo;
     private ServerInfo? _selectedServer;
 
-    public MainViewModel(IServerApiClient apiClient, ServerDiscoveryService discoveryService)
+    public MainViewModel(IServerApiClient apiClient, ServerDiscoveryService discoveryService, LocalUsbipClient localUsbipClient)
     {
         _apiClient = apiClient;
         _discoveryService = discoveryService;
+        _localUsbipClient = localUsbipClient;
 
         // Initialize collections
         Devices = new ObservableCollection<UsbDevice>();
@@ -227,18 +229,30 @@ public class MainViewModel : ViewModelBase, IDisposable
 
         try
         {
+            // First, validate with the server that the device can be attached
             var response = await _apiClient.AttachDeviceAsync(device.BusId);
-            if (response.Success && response.Device != null)
+            if (!response.Success)
             {
-                UpdateDeviceInList(response.Device);
-                StatusMessage = $"Device {device.BusId} attached successfully";
-                MessageBox.Show(response.Message, "Attach Success", MessageBoxButton.OK, MessageBoxImage.Information);
-            }
-            else
-            {
-                StatusMessage = $"Attach failed: {response.Message}";
+                StatusMessage = $"Attach validation failed: {response.Message}";
                 MessageBox.Show(response.Message, "Attach Failed", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
             }
+
+            // Get server IP from the current server URL
+            var serverIp = ExtractServerIp(ServerUrl);
+            if (string.IsNullOrEmpty(serverIp))
+            {
+                throw new InvalidOperationException("Unable to determine server IP address");
+            }
+
+            // Perform the actual attachment locally using usbip client
+            await _localUsbipClient.AttachDeviceAsync(serverIp, device.BusId);
+
+            // Refresh device list to show updated state
+            await RefreshDevicesAsync();
+
+            StatusMessage = $"Device {device.BusId} attached successfully";
+            MessageBox.Show($"Device {device.BusId} attached successfully", "Attach Success", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (Exception ex)
         {
@@ -258,17 +272,14 @@ public class MainViewModel : ViewModelBase, IDisposable
 
         try
         {
-            var response = await _apiClient.DetachDeviceAsync(device.BusId);
-            if (response.Success && response.Device != null)
-            {
-                UpdateDeviceInList(response.Device);
-                StatusMessage = $"Device {device.BusId} detached successfully";
-            }
-            else
-            {
-                StatusMessage = $"Detach failed: {response.Message}";
-                MessageBox.Show(response.Message, "Detach Failed", MessageBoxButton.OK, MessageBoxImage.Warning);
-            }
+            // Perform the actual detachment locally using usbip client
+            await _localUsbipClient.DetachDeviceAsync(device.BusId);
+
+            // Refresh device list to show updated state
+            await RefreshDevicesAsync();
+
+            StatusMessage = $"Device {device.BusId} detached successfully";
+            MessageBox.Show($"Device {device.BusId} detached successfully", "Detach Success", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (Exception ex)
         {
@@ -371,6 +382,19 @@ public class MainViewModel : ViewModelBase, IDisposable
         {
             var index = Devices.IndexOf(existingDevice);
             Devices[index] = updatedDevice;
+        }
+    }
+
+    private string? ExtractServerIp(string serverUrl)
+    {
+        try
+        {
+            var uri = new Uri(serverUrl);
+            return uri.Host;
+        }
+        catch
+        {
+            return null;
         }
     }
 

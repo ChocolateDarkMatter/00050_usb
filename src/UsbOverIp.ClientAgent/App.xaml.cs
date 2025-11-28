@@ -43,6 +43,7 @@ public partial class App : Application
         services.AddSingleton(sp => new ServerDiscoveryService(
             sp.GetRequiredService<ILogger<ServerDiscoveryService>>(),
             50052)); // Discovery port
+        services.AddSingleton<LocalUsbipClient>();
 
         // Register ViewModels
         services.AddSingleton<MainViewModel>();
