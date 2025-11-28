@@ -1,0 +1,52 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UsbOverIp.Shared", "UsbOverIp.Shared\UsbOverIp.Shared.csproj", "{F7671C6F-E5A1-4260-8A5B-7595545E9EAC}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UsbOverIp.BackendService", "UsbOverIp.BackendService\UsbOverIp.BackendService.csproj", "{51D2ECAE-2C8D-4C6C-9A65-DB91D6FCFBBB}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UsbOverIp.ClientAgent", "UsbOverIp.ClientAgent\UsbOverIp.ClientAgent.csproj", "{4AABDB53-F548-46B1-A439-B2CE080A13F1}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UsbOverIp.Shared.Tests", "..\tests\UsbOverIp.Shared.Tests\UsbOverIp.Shared.Tests.csproj", "{FDD0F339-6E4B-450F-857C-05C10DA03EA9}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UsbOverIp.BackendService.Tests", "..\tests\UsbOverIp.BackendService.Tests\UsbOverIp.BackendService.Tests.csproj", "{E50BB490-E180-4D30-9498-752AE31F5CFF}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UsbOverIp.ClientAgent.Tests", "..\tests\UsbOverIp.ClientAgent.Tests\UsbOverIp.ClientAgent.Tests.csproj", "{8E08CF0F-FAF0-474D-BF77-4ED552179397}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{F7671C6F-E5A1-4260-8A5B-7595545E9EAC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F7671C6F-E5A1-4260-8A5B-7595545E9EAC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F7671C6F-E5A1-4260-8A5B-7595545E9EAC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F7671C6F-E5A1-4260-8A5B-7595545E9EAC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{51D2ECAE-2C8D-4C6C-9A65-DB91D6FCFBBB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{51D2ECAE-2C8D-4C6C-9A65-DB91D6FCFBBB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{51D2ECAE-2C8D-4C6C-9A65-DB91D6FCFBBB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{51D2ECAE-2C8D-4C6C-9A65-DB91D6FCFBBB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4AABDB53-F548-46B1-A439-B2CE080A13F1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4AABDB53-F548-46B1-A439-B2CE080A13F1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4AABDB53-F548-46B1-A439-B2CE080A13F1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4AABDB53-F548-46B1-A439-B2CE080A13F1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FDD0F339-6E4B-450F-857C-05C10DA03EA9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FDD0F339-6E4B-450F-857C-05C10DA03EA9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FDD0F339-6E4B-450F-857C-05C10DA03EA9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FDD0F339-6E4B-450F-857C-05C10DA03EA9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E50BB490-E180-4D30-9498-752AE31F5CFF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E50BB490-E180-4D30-9498-752AE31F5CFF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E50BB490-E180-4D30-9498-752AE31F5CFF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E50BB490-E180-4D30-9498-752AE31F5CFF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8E08CF0F-FAF0-474D-BF77-4ED552179397}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8E08CF0F-FAF0-474D-BF77-4ED552179397}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8E08CF0F-FAF0-474D-BF77-4ED552179397}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8E08CF0F-FAF0-474D-BF77-4ED552179397}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal

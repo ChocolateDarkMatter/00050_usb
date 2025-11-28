@@ -1,0 +1,151 @@
+﻿<Window x:Class="UsbOverIp.ClientAgent.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:UsbOverIp.ClientAgent"
+        mc:Ignorable="d"
+        Title="USB-over-IP Client" Height="600" Width="900"
+        WindowStartupLocation="CenterScreen">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header / Connection Panel -->
+        <Border Grid.Row="0" Background="#FF2D2D30" Padding="10">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <!-- Server Selection Row -->
+                <Grid Grid.Row="0" Margin="0,0,0,10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock Grid.Column="0" Text="Discovered Servers:" Foreground="White" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                    <ComboBox Grid.Column="1" ItemsSource="{Binding DiscoveredServers}"
+                              SelectedItem="{Binding SelectedServer}"
+                              DisplayMemberPath="Hostname"
+                              VerticalAlignment="Center" Padding="5" Margin="0,0,10,0">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal">
+                                    <Ellipse Width="8" Height="8" Margin="0,0,5,0" VerticalAlignment="Center">
+                                        <Ellipse.Style>
+                                            <Style TargetType="Ellipse">
+                                                <Setter Property="Fill" Value="Red"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsOnline}" Value="True">
+                                                        <Setter Property="Fill" Value="LimeGreen"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Ellipse.Style>
+                                    </Ellipse>
+                                    <TextBlock Text="{Binding Hostname}"/>
+                                    <TextBlock Text=" (" Foreground="Gray"/>
+                                    <TextBlock Text="{Binding IpAddress}" Foreground="Gray"/>
+                                    <TextBlock Text=")" Foreground="Gray"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                    <Button Grid.Column="2" Content="Connect to Selected" Command="{Binding SelectServerCommand}"
+                            CommandParameter="{Binding SelectedServer}"
+                            Padding="15,5"/>
+                </Grid>
+
+                <!-- Manual Connection Row -->
+                <Grid Grid.Row="1">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock Grid.Column="0" Text="Manual URL:" Foreground="White" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                    <TextBox Grid.Column="1" Text="{Binding ServerUrl, UpdateSourceTrigger=PropertyChanged}"
+                             VerticalAlignment="Center" Padding="5" Margin="0,0,10,0"/>
+                    <Button Grid.Column="2" Content="Connect" Command="{Binding ConnectCommand}"
+                            Padding="15,5" Margin="0,0,10,0"/>
+                    <Button Grid.Column="3" Content="Refresh" Command="{Binding RefreshCommand}"
+                            Padding="15,5"/>
+                </Grid>
+            </Grid>
+        </Border>
+
+        <!-- Device List -->
+        <DataGrid Grid.Row="1" ItemsSource="{Binding Devices}" AutoGenerateColumns="False"
+                  CanUserAddRows="False" CanUserDeleteRows="False" IsReadOnly="True"
+                  SelectionMode="Single" GridLinesVisibility="Horizontal"
+                  HeadersVisibility="Column" Margin="10">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Bus ID" Binding="{Binding BusId}" Width="80"/>
+                <DataGridTextColumn Header="VID:PID" Width="100">
+                    <DataGridTextColumn.Binding>
+                        <MultiBinding StringFormat="{}{0}:{1}">
+                            <Binding Path="VendorId"/>
+                            <Binding Path="ProductId"/>
+                        </MultiBinding>
+                    </DataGridTextColumn.Binding>
+                </DataGridTextColumn>
+                <DataGridTextColumn Header="Description" Binding="{Binding Description}" Width="*"/>
+                <DataGridCheckBoxColumn Header="Shared" Binding="{Binding IsShared}" Width="70"/>
+                <DataGridCheckBoxColumn Header="Attached" Binding="{Binding IsAttached}" Width="80"/>
+                <DataGridTextColumn Header="Attached To" Binding="{Binding AttachedToClientIp}" Width="120"/>
+                <DataGridTemplateColumn Header="Actions" Width="250">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                <Button Content="Share" Command="{Binding DataContext.ShareDeviceCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                        CommandParameter="{Binding}" Margin="2" Padding="10,3" Width="60"/>
+                                <Button Content="Unshare" Command="{Binding DataContext.UnshareDeviceCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                        CommandParameter="{Binding}" Margin="2" Padding="10,3" Width="70"/>
+                                <Button Content="Attach" Command="{Binding DataContext.AttachDeviceCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                        CommandParameter="{Binding}" Margin="2" Padding="10,3" Width="60"/>
+                                <Button Content="Detach" Command="{Binding DataContext.DetachDeviceCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                        CommandParameter="{Binding}" Margin="2" Padding="10,3" Width="60"/>
+                            </StackPanel>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <!-- Status Bar -->
+        <Border Grid.Row="2" Background="#FF007ACC" Padding="10,5">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <TextBlock Grid.Column="0" Text="{Binding StatusMessage}" Foreground="White" VerticalAlignment="Center"/>
+                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                    <TextBlock Text="Connected: " Foreground="White" VerticalAlignment="Center"/>
+                    <Ellipse Width="10" Height="10" Margin="5,0" VerticalAlignment="Center">
+                        <Ellipse.Style>
+                            <Style TargetType="Ellipse">
+                                <Setter Property="Fill" Value="Red"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsConnected}" Value="True">
+                                        <Setter Property="Fill" Value="LimeGreen"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Ellipse.Style>
+                    </Ellipse>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

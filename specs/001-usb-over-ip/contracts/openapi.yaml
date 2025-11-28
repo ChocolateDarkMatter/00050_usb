@@ -1,0 +1,511 @@
+openapi: 3.0.3
+info:
+  title: USB-over-IP Server API
+  description: REST API for managing USB device sharing via usbipd-win
+  version: 1.0.0
+  contact:
+    name: USB-over-IP Project
+
+servers:
+  - url: http://{serverIp}:{port}/api
+    description: USB Server API
+    variables:
+      serverIp:
+        default: localhost
+        description: Server IP address
+      port:
+        default: "50051"
+        description: API port
+
+paths:
+  /health:
+    get:
+      summary: Health check
+      description: Returns server health status and basic information
+      operationId: getHealth
+      tags:
+        - Health
+      responses:
+        "200":
+          description: Server is healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+
+  /devices:
+    get:
+      summary: List all USB devices
+      description: Returns all USB devices connected to the server
+      operationId: listDevices
+      tags:
+        - Devices
+      responses:
+        "200":
+          description: List of devices
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeviceListResponse"
+        "503":
+          description: usbipd-win unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /devices/{busId}:
+    get:
+      summary: Get device details
+      description: Returns details for a specific USB device
+      operationId: getDevice
+      tags:
+        - Devices
+      parameters:
+        - name: busId
+          in: path
+          required: true
+          description: USB device bus ID (e.g., "1-1")
+          schema:
+            type: string
+            pattern: '^\d+-[\d-]+$'
+      responses:
+        "200":
+          description: Device details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UsbDevice"
+        "404":
+          description: Device not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /devices/{busId}/share:
+    post:
+      summary: Share a device
+      description: Export a USB device for remote client access
+      operationId: shareDevice
+      tags:
+        - Devices
+      parameters:
+        - name: busId
+          in: path
+          required: true
+          description: USB device bus ID
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Device shared successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeviceResponse"
+        "404":
+          description: Device not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Device already shared
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Failed to share device
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /devices/{busId}/unshare:
+    post:
+      summary: Unshare a device
+      description: Stop exporting a USB device, detaching any connected clients
+      operationId: unshareDevice
+      tags:
+        - Devices
+      parameters:
+        - name: busId
+          in: path
+          required: true
+          description: USB device bus ID
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Device unshared successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeviceResponse"
+        "404":
+          description: Device not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Failed to unshare device
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /devices/{busId}/attach:
+    post:
+      summary: Attach device to client
+      description: Attach a shared USB device to a remote client
+      operationId: attachDevice
+      tags:
+        - Devices
+      parameters:
+        - name: busId
+          in: path
+          required: true
+          description: USB device bus ID
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AttachRequest"
+      responses:
+        "200":
+          description: Device attached successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AttachResponse"
+        "400":
+          description: Invalid request (e.g., invalid client address)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Device not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Device not shared or already attached
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Failed to attach device
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /devices/{busId}/detach:
+    post:
+      summary: Detach device from client
+      description: Detach a USB device from its current client
+      operationId: detachDevice
+      tags:
+        - Devices
+      parameters:
+        - name: busId
+          in: path
+          required: true
+          description: USB device bus ID
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Device detached successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeviceResponse"
+        "404":
+          description: Device not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Device not attached
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Failed to detach device
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /config:
+    get:
+      summary: Get server configuration
+      description: Returns current server configuration
+      operationId: getConfig
+      tags:
+        - Configuration
+      responses:
+        "200":
+          description: Server configuration
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServerConfiguration"
+
+    put:
+      summary: Update server configuration
+      description: Update server configuration settings
+      operationId: updateConfig
+      tags:
+        - Configuration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ServerConfigurationUpdate"
+      responses:
+        "200":
+          description: Configuration updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServerConfiguration"
+        "400":
+          description: Invalid configuration
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+components:
+  schemas:
+    UsbDevice:
+      type: object
+      required:
+        - busId
+        - vendorId
+        - productId
+        - description
+        - isShared
+        - isAttached
+      properties:
+        busId:
+          type: string
+          description: Unique device identifier from USB subsystem
+          example: "1-1"
+        vendorId:
+          type: string
+          description: USB Vendor ID (hex)
+          example: "046D"
+        productId:
+          type: string
+          description: USB Product ID (hex)
+          example: "C534"
+        description:
+          type: string
+          description: Human-readable device name
+          example: "Logitech USB Receiver"
+        deviceClass:
+          type: string
+          description: USB device class
+          example: "HID"
+        isShared:
+          type: boolean
+          description: Whether device is exported for remote access
+        isAttached:
+          type: boolean
+          description: Whether device is currently attached to a client
+        attachedToClientIp:
+          type: string
+          nullable: true
+          description: IP address of attached client
+          example: "192.168.1.25"
+
+    ServerInfo:
+      type: object
+      required:
+        - id
+        - hostname
+        - version
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique server identifier
+        hostname:
+          type: string
+          description: Server machine hostname
+        version:
+          type: string
+          description: Server software version
+
+    HealthResponse:
+      type: object
+      required:
+        - status
+        - version
+        - hostname
+        - usbipdAvailable
+      properties:
+        status:
+          type: string
+          enum: [ok, degraded, error]
+          description: Overall server health status
+        version:
+          type: string
+          description: Server software version
+        hostname:
+          type: string
+          description: Server machine hostname
+        usbipdAvailable:
+          type: boolean
+          description: Whether usbipd-win is installed and accessible
+        usbipdVersion:
+          type: string
+          description: Version of usbipd-win
+        deviceCount:
+          type: integer
+          description: Total number of USB devices
+        sharedDeviceCount:
+          type: integer
+          description: Number of shared devices
+        attachedDeviceCount:
+          type: integer
+          description: Number of currently attached devices
+
+    DeviceListResponse:
+      type: object
+      required:
+        - devices
+        - serverInfo
+      properties:
+        devices:
+          type: array
+          items:
+            $ref: "#/components/schemas/UsbDevice"
+        serverInfo:
+          $ref: "#/components/schemas/ServerInfo"
+
+    DeviceResponse:
+      type: object
+      required:
+        - success
+        - device
+      properties:
+        success:
+          type: boolean
+        device:
+          $ref: "#/components/schemas/UsbDevice"
+        message:
+          type: string
+
+    AttachRequest:
+      type: object
+      required:
+        - clientAddress
+      properties:
+        clientAddress:
+          type: string
+          description: IP address of the client to attach to
+          example: "192.168.1.25"
+
+    AttachResponse:
+      type: object
+      required:
+        - success
+        - device
+      properties:
+        success:
+          type: boolean
+        device:
+          $ref: "#/components/schemas/UsbDevice"
+        message:
+          type: string
+
+    ServerConfiguration:
+      type: object
+      properties:
+        serverId:
+          type: string
+          format: uuid
+        apiPort:
+          type: integer
+          default: 50051
+        discoveryPort:
+          type: integer
+          default: 50050
+        broadcastIntervalSeconds:
+          type: integer
+          default: 5
+        clientTimeoutSeconds:
+          type: integer
+          default: 30
+        logLevel:
+          type: string
+          enum: [Error, Warning, Info, Debug]
+          default: Info
+
+    ServerConfigurationUpdate:
+      type: object
+      properties:
+        broadcastIntervalSeconds:
+          type: integer
+          minimum: 1
+          maximum: 60
+        clientTimeoutSeconds:
+          type: integer
+          minimum: 10
+          maximum: 300
+        logLevel:
+          type: string
+          enum: [Error, Warning, Info, Debug]
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - code
+        - message
+      properties:
+        error:
+          type: boolean
+          default: true
+        code:
+          type: string
+          description: Error code for programmatic handling
+          example: "DEVICE_IN_USE"
+        message:
+          type: string
+          description: Human-readable error message
+        details:
+          type: object
+          additionalProperties: true
+          description: Additional error context
+
+  securitySchemes:
+    ApiToken:
+      type: apiKey
+      in: header
+      name: X-UsbServer-Token
+      description: Optional shared secret token for authentication (future)
+
+tags:
+  - name: Health
+    description: Server health and status endpoints
+  - name: Devices
+    description: USB device management operations
+  - name: Configuration
+    description: Server configuration management
