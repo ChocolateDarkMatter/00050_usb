@@ -10,14 +10,15 @@ A complete solution for sharing USB devices over a network using the usbipd-win 
 - **UDP Discovery**: Automatic server announcement for easy client discovery
 - **usbipd-win Integration**: Leverages the robust usbipd-win implementation
 - **Comprehensive Logging**: Structured logging with Serilog (JSON and text formats)
-- **Device Management**: Share, unshare, attach, and detach USB devices remotely
+- **Device Management**: Share and unshare USB devices for network access
 
 ### Windows Client
 - **Server Discovery**: Automatically discovers servers on the local network
 - **System Tray Integration**: Runs in background with system tray icon
 - **Auto-start Support**: Configure to start with Windows
 - **Device Management UI**: WPF application with intuitive interface
-- **Multi-Server Support**: Connect to multiple USB servers simultaneously
+- **Local USBIP Client**: Attaches/detaches devices locally using USBIP protocol
+- **Multi-Server Support**: Connect to different USB servers as needed
 
 ## Architecture
 
@@ -29,24 +30,33 @@ A complete solution for sharing USB devices over a network using the usbipd-win 
 ┌──────────────────────┐                    ┌──────────────────────┐
 │   Windows Server     │                    │   Windows Client     │
 │                      │                    │                      │
-│  ┌────────────────┐  │                    │  ┌────────────────┐  │
-│  │ Backend Service│  │    UDP Broadcast   │  │  Client Agent  │  │
-│  │                │  │───────(Discovery)──>│  │                │  │
-│  │ - REST API     │  │    Port 50052      │  │ - WPF UI       │  │
-│  │ - Discovery    │  │                    │  │ - Auto-start   │  │
-│  │ - Windows Svc  │  │    REST API        │  │ - System Tray  │  │
-│  └────────┬───────┘  │<───(Device Ops)────│  └────────┬───────┘  │
-│           │          │    Port 50051      │           │          │
-│  ┌────────▼───────┐  │                    │  ┌────────▼───────┐  │
-│  │  usbipd-win    │  │    USB/IP Protocol │  │  usbipd-win    │  │
-│  │                │  │<───(USB Traffic)───>│  │                │  │
-│  └────────┬───────┘  │    Port 3240       │  └────────┬───────┘  │
+│  ┌────────────────┐  │    UDP Broadcast   │  ┌────────────────┐  │
+│  │ Backend Service│  │───────(Discovery)──>│  │  Client Agent  │  │
+│  │                │  │    Port 50052      │  │                │  │
+│  │ - REST API     │  │                    │  │ - WPF UI       │  │
+│  │ - Discovery    │  │    REST API        │  │ - Auto-start   │  │
+│  │ - Windows Svc  │  │<──(Share/Unshare)──│  │ - System Tray  │  │
+│  └────────┬───────┘  │    Port 50051      │  │ - Local USBIP  │  │
+│           │          │                    │  └────────┬───────┘  │
+│  ┌────────▼───────┐  │                    │           │          │
+│  │  usbipd-win    │  │    USB/IP Protocol │  ┌────────▼───────┐  │
+│  │  (Server)      │  │<───(USB Traffic)───│  │   usbip.exe    │  │
+│  │                │  │    Port 3240       │  │   (Client)     │  │
+│  │ bind/unbind    │  │                    │  │ attach/detach  │  │
+│  └────────┬───────┘  │                    │  └────────┬───────┘  │
 │           │          │                    │           │          │
 │  ┌────────▼───────┐  │                    │  ┌────────▼───────┐  │
 │  │  USB Devices   │  │                    │  │   Applications │  │
 │  │  (Physical)    │  │                    │  │  (Using Device)│  │
 │  └────────────────┘  │                    │  └────────────────┘  │
 └──────────────────────┘                    └──────────────────────┘
+
+Workflow:
+1. Server shares device (bind) via REST API
+2. Client attaches device locally using usbip.exe
+3. USB traffic flows over USB/IP protocol (port 3240)
+4. Client detaches device locally when done
+5. Server unshares device (unbind) via REST API
 ```
 
 ## Prerequisites
@@ -60,16 +70,34 @@ A complete solution for sharing USB devices over a network using the usbipd-win 
 ### Windows Client
 - Windows 10/11
 - .NET 8.0 Runtime
-- [usbipd-win](https://github.com/dorssel/usbipd-win) installed
+- `usbip.exe` client tool in PATH (included with usbipd-win or available separately)
+  - For usbipd-win users: The `usbip.exe` client is typically located at:
+    `C:\Program Files\usbipd-win\usbip.exe`
+  - Add this directory to your system PATH for automatic detection
 
 ## Quick Start
 
-### 1. Install usbipd-win
+### 1. Install Prerequisites
 
-On both server and client machines:
+**On the server machine:**
 
 ```powershell
+# Install usbipd-win
 winget install --id dorssel.usbipd-win
+```
+
+**On the client machine:**
+
+```powershell
+# Install usbipd-win (for the usbip.exe client tool)
+winget install --id dorssel.usbipd-win
+
+# Add usbip.exe to PATH
+$usbipPath = "C:\Program Files\usbipd-win"
+[Environment]::SetEnvironmentVariable("Path", $env:Path + ";$usbipPath", [System.EnvironmentVariableTarget]::Machine)
+
+# Verify installation
+usbip version
 ```
 
 ### 2. Build the Project
@@ -108,8 +136,14 @@ cd src\UsbOverIp.ClientAgent\bin\Release\net8.0-windows
 The client will:
 - Automatically discover servers on the network
 - Display available USB devices
-- Allow you to attach/detach devices
+- Allow you to share/unshare devices on the server
+- Allow you to attach/detach devices locally
 - Run in the system tray
+
+**Note:** To attach a device:
+1. First click "Share" on the device (this runs on the server)
+2. Then click "Attach" (this runs `usbip attach` locally on your client)
+3. To release the device, click "Detach" then "Unshare"
 
 ## Configuration
 
@@ -136,7 +170,7 @@ Edit `appsettings.json` in the service directory:
 
 ### Firewall Configuration
 
-Allow the following ports through Windows Firewall:
+**On the server machine:**
 
 ```powershell
 # Discovery Port (UDP)
@@ -145,8 +179,15 @@ New-NetFirewallRule -DisplayName "USB-over-IP Discovery" -Direction Inbound -Pro
 # API Port (TCP)
 New-NetFirewallRule -DisplayName "USB-over-IP API" -Direction Inbound -Protocol TCP -LocalPort 50051 -Action Allow
 
-# USB/IP Traffic (TCP) - handled by usbipd-win
-New-NetFirewallRule -DisplayName "USB/IP" -Direction Inbound -Protocol TCP -LocalPort 3240 -Action Allow
+# USB/IP Traffic (TCP) - for usbipd-win server
+New-NetFirewallRule -DisplayName "USB/IP Server" -Direction Inbound -Protocol TCP -LocalPort 3240 -Action Allow
+```
+
+**On the client machine:**
+
+```powershell
+# USB/IP Traffic (TCP) - for usbip client
+New-NetFirewallRule -DisplayName "USB/IP Client" -Direction Outbound -Protocol TCP -RemotePort 3240 -Action Allow
 ```
 
 ## Project Structure
@@ -162,7 +203,7 @@ New-NetFirewallRule -DisplayName "USB/IP" -Direction Inbound -Protocol TCP -Loca
 │   │   └── Program.cs                  # Service entry point
 │   │
 │   ├── UsbOverIp.ClientAgent/         # WPF Client Application
-│   │   ├── Services/                   # Client services
+│   │   ├── Services/                   # Client services (API, Discovery, LocalUsbipClient)
 │   │   ├── ViewModels/                 # MVVM view models
 │   │   ├── MainWindow.xaml             # Main UI
 │   │   └── App.xaml.cs                 # Application entry point
@@ -208,17 +249,19 @@ POST /api/devices/{busId}/unshare
 ```
 Stops sharing a device.
 
-#### Attach Device
+#### Validate Device for Attachment
 ```
 POST /api/devices/{busId}/attach
 ```
-Attaches a shared device to the requesting client.
+Validates that a device is shared and ready for client-side attachment.
+Note: Actual attachment is performed locally on the client using `usbip attach`.
 
-#### Detach Device
+#### Validate Device for Detachment
 ```
 POST /api/devices/{busId}/detach
 ```
-Detaches a device from the client.
+Validates that a device exists.
+Note: Actual detachment is performed locally on the client using `usbip detach`.
 
 ## Development
 
@@ -270,10 +313,20 @@ dotnet build -c Release
 
 ### Device Attachment Fails
 
-1. Ensure device is shared first
-2. Verify firewall allows TCP ports 50051 and 3240
-3. Check usbipd-win logs: `usbipd list`
-4. Run client as Administrator if needed
+1. Ensure device is shared first (click "Share" button)
+2. Verify `usbip.exe` is in PATH on the client: `usbip version`
+3. Verify firewall allows TCP port 3240 on both server and client
+4. Check server logs for share status
+5. Try manual attachment to test:
+   ```powershell
+   # From client machine
+   usbip attach -r <server-ip> -b <bus-id>
+   ```
+6. Check attached devices:
+   ```powershell
+   usbip port
+   ```
+7. If attachment works manually but not via GUI, check client application logs
 
 ### Permission Issues
 
